@@ -50,6 +50,41 @@ export type Database = {
         }
         Relationships: []
       }
+      chapters: {
+        Row: {
+          chapter_number: number
+          created_at: string
+          id: string
+          story_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          chapter_number: number
+          created_at?: string
+          id?: string
+          story_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          chapter_number?: number
+          created_at?: string
+          id?: string
+          story_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chapters_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       connections: {
         Row: {
           created_at: string | null
@@ -245,6 +280,108 @@ export type Database = {
           },
         ]
       }
+      page_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          page_id: string
+          user_name: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          page_id: string
+          user_name: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          page_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_comments_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      page_likes: {
+        Row: {
+          created_at: string
+          id: string
+          page_id: string
+          user_session: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          page_id: string
+          user_session: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          page_id?: string
+          user_session?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_likes_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pages: {
+        Row: {
+          chapter_id: string
+          content: string
+          created_at: string
+          id: string
+          image_url: string | null
+          page_number: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          chapter_id: string
+          content: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          page_number: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          chapter_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          page_number?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pages_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -287,6 +424,30 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           username?: string
+        }
+        Relationships: []
+      }
+      stories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
