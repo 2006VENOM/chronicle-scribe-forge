@@ -429,22 +429,34 @@ export type Database = {
       }
       stories: {
         Row: {
+          cover_image_url: string | null
           created_at: string
           description: string | null
+          fake_comments: number | null
+          fake_likes: number | null
+          fake_reads: number | null
           id: string
           title: string
           updated_at: string
         }
         Insert: {
+          cover_image_url?: string | null
           created_at?: string
           description?: string | null
+          fake_comments?: number | null
+          fake_likes?: number | null
+          fake_reads?: number | null
           id?: string
           title: string
           updated_at?: string
         }
         Update: {
+          cover_image_url?: string | null
           created_at?: string
           description?: string | null
+          fake_comments?: number | null
+          fake_likes?: number | null
+          fake_reads?: number | null
           id?: string
           title?: string
           updated_at?: string

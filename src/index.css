@@ -8,14 +8,14 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Literary color palette */
-    --background: 0 0% 100%;
-    --foreground: 230 15% 15%;
+    /* Literary color palette - No pure whites, use glass panels */
+    --background: 230 15% 8%;
+    --foreground: 35 25% 95%;
 
-    --card: 0 0% 100%;
+    --card: 0 0% 98%;
     --card-foreground: 230 15% 15%;
 
-    --popover: 0 0% 100%;
+    --popover: 0 0% 98%;
     --popover-foreground: 230 15% 15%;
 
     /* Deep literary navy */
@@ -67,11 +67,11 @@ All colors MUST be HSL.
     --background: 230 25% 8%;
     --foreground: 35 25% 95%;
 
-    --card: 230 20% 12%;
-    --card-foreground: 35 25% 95%;
+    --card: 0 0% 98%;
+    --card-foreground: 230 15% 15%;
 
-    --popover: 230 20% 12%;
-    --popover-foreground: 35 25% 95%;
+    --popover: 0 0% 98%;
+    --popover-foreground: 230 15% 15%;
 
     /* Lighter primary for dark mode */
     --primary: 230 55% 75%;
@@ -164,5 +164,17 @@ All colors MUST be HSL.
 
   .story-link {
     @apply relative inline-block after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left;
+  }
+
+  .glass-panel {
+    @apply bg-card/90 backdrop-blur-md border border-white/10 rounded-lg shadow-xl;
+  }
+
+  .reading-text {
+    @apply opacity-0 animate-fade-in;
+  }
+
+  .story-cover {
+    @apply rounded-xl overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105 cursor-pointer;
   }
 }

@@ -1,74 +1,77 @@
 import { useState, useEffect } from "react";
-import { Lock, Plus, Eye, ArrowLeft, Book, FileText, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { X, Plus, Eye, Trash2, Upload, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { PDFUploader } from "./PDFUploader";
 
 interface Story {
   id: string;
   title: string;
   description: string;
+  cover_image_url?: string;
+  created_at: string;
 }
 
 interface Chapter {
   id: string;
-  chapter_number: number;
   title: string;
+  chapter_number: number;
   story_id: string;
 }
 
 interface Page {
   id: string;
-  page_number: number;
   title: string;
   content: string;
-  image_url?: string;
+  page_number: number;
   chapter_id: string;
+  image_url?: string;
 }
 
 interface AdminPanelProps {
   onClose: () => void;
 }
 
-export function AdminPanel({ onClose }: AdminPanelProps) {
+export const AdminPanel = ({ onClose }: AdminPanelProps) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
-  const [currentView, setCurrentView] = useState<'stories' | 'chapters' | 'pages' | 'add-chapter' | 'add-page' | 'preview'>('stories');
+  const [currentView, setCurrentView] = useState<'stories' | 'chapters' | 'pages' | 'add-story' | 'add-chapter' | 'add-page' | 'preview' | 'pdf-upload'>('stories');
   
-  // Data states
   const [stories, setStories] = useState<Story[]>([]);
-  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
-  const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
   const [pages, setPages] = useState<Page[]>([]);
   
+  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
+  const [previewPage, setPreviewPage] = useState<Page | null>(null);
+  
   // Form states
+  const [newStoryTitle, setNewStoryTitle] = useState("");
+  const [newStoryDescription, setNewStoryDescription] = useState("");
+  const [newStoryCover, setNewStoryCover] = useState<File | null>(null);
   const [newChapterTitle, setNewChapterTitle] = useState("");
   const [newPageTitle, setNewPageTitle] = useState("");
   const [newPageContent, setNewPageContent] = useState("");
-  const [newPageImage, setNewPageImage] = useState("");
-  const [previewPage, setPreviewPage] = useState<Partial<Page> | null>(null);
-  
-  const { toast } = useToast();
 
-  const handleLogin = () => {
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadStories();
+    }
+  }, [isAuthenticated]);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
     if (password === "@Mickloving2006") {
       setIsAuthenticated(true);
-      loadStories();
-      toast({
-        title: "Welcome Admin",
-        description: "You have successfully logged in to the admin panel."
-      });
+      toast.success("Admin access granted!");
     } else {
-      toast({
-        title: "Access Denied",
-        description: "Incorrect password. Please try again.",
-        variant: "destructive"
-      });
+      toast.error("Invalid password");
     }
   };
 
@@ -78,16 +81,12 @@ export function AdminPanel({ onClose }: AdminPanelProps) {
         .from('stories')
         .select('*')
         .order('created_at', { ascending: false });
-
+      
       if (error) throw error;
       setStories(data || []);
     } catch (error) {
       console.error('Error loading stories:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load stories.",
-        variant: "destructive"
-      });
+      toast.error("Failed to load stories");
     }
   };
 
@@ -98,11 +97,12 @@ export function AdminPanel({ onClose }: AdminPanelProps) {
         .select('*')
         .eq('story_id', storyId)
         .order('chapter_number', { ascending: true });
-
+      
       if (error) throw error;
       setChapters(data || []);
     } catch (error) {
       console.error('Error loading chapters:', error);
+      toast.error("Failed to load chapters");
     }
   };
 
@@ -113,138 +113,175 @@ export function AdminPanel({ onClose }: AdminPanelProps) {
         .select('*')
         .eq('chapter_id', chapterId)
         .order('page_number', { ascending: true });
-
+      
       if (error) throw error;
       setPages(data || []);
     } catch (error) {
       console.error('Error loading pages:', error);
+      toast.error("Failed to load pages");
     }
   };
 
-  const createChapter = async () => {
-    if (!selectedStory || !newChapterTitle.trim()) return;
+  const uploadCoverImage = async (file: File): Promise<string> => {
+    const filePath = `covers/${Date.now()}-${file.name}`;
+    
+    const { data, error } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file);
+    
+    if (error) throw error;
+    
+    const { data: { publicUrl } } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+    
+    return publicUrl;
+  };
+
+  const createStory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStoryTitle) return;
+
+    try {
+      let coverImageUrl = null;
+      if (newStoryCover) {
+        coverImageUrl = await uploadCoverImage(newStoryCover);
+      }
+
+      const { error } = await supabase
+        .from('stories')
+        .insert({
+          title: newStoryTitle,
+          description: newStoryDescription,
+          cover_image_url: coverImageUrl
+        });
+
+      if (error) throw error;
+
+      toast.success("Story created successfully!");
+      setNewStoryTitle("");
+      setNewStoryDescription("");
+      setNewStoryCover(null);
+      setCurrentView('stories');
+      loadStories();
+    } catch (error) {
+      console.error('Error creating story:', error);
+      toast.error("Failed to create story");
+    }
+  };
+
+  const deleteStory = async (storyId: string) => {
+    if (!confirm("Are you sure you want to delete this entire story? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('stories')
+        .delete()
+        .eq('id', storyId);
+
+      if (error) throw error;
+
+      toast.success("Story deleted successfully!");
+      loadStories();
+    } catch (error) {
+      console.error('Error deleting story:', error);
+      toast.error("Failed to delete story");
+    }
+  };
+
+  const createChapter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newChapterTitle || !selectedStory) return;
 
     try {
       const nextChapterNumber = chapters.length + 1;
       
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('chapters')
         .insert({
           story_id: selectedStory.id,
-          chapter_number: nextChapterNumber,
-          title: newChapterTitle.trim()
-        })
-        .select()
-        .single();
+          title: newChapterTitle,
+          chapter_number: nextChapterNumber
+        });
 
       if (error) throw error;
 
+      toast.success("Chapter created successfully!");
       setNewChapterTitle("");
-      loadChapters(selectedStory.id);
       setCurrentView('chapters');
-      
-      toast({
-        title: "Chapter Created",
-        description: `Chapter ${nextChapterNumber}: ${data.title} has been created.`
-      });
+      loadChapters(selectedStory.id);
     } catch (error) {
       console.error('Error creating chapter:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create chapter.",
-        variant: "destructive"
-      });
+      toast.error("Failed to create chapter");
     }
   };
 
-  const createPage = async () => {
-    if (!selectedChapter || !newPageTitle.trim() || !newPageContent.trim()) return;
+  const createPage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPageTitle || !newPageContent || !selectedChapter) return;
 
     try {
       const nextPageNumber = pages.length + 1;
       
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('pages')
         .insert({
           chapter_id: selectedChapter.id,
-          page_number: nextPageNumber,
-          title: newPageTitle.trim(),
-          content: newPageContent.trim(),
-          image_url: newPageImage.trim() || null
-        })
-        .select()
-        .single();
+          title: newPageTitle,
+          content: newPageContent,
+          page_number: nextPageNumber
+        });
 
       if (error) throw error;
 
+      toast.success("Page created successfully!");
       setNewPageTitle("");
       setNewPageContent("");
-      setNewPageImage("");
-      loadPages(selectedChapter.id);
       setCurrentView('pages');
-      
-      toast({
-        title: "Page Published",
-        description: `Page ${nextPageNumber}: ${data.title} has been published.`
-      });
+      loadPages(selectedChapter.id);
     } catch (error) {
       console.error('Error creating page:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create page.",
-        variant: "destructive"
-      });
+      toast.error("Failed to create page");
     }
   };
 
-  const handlePreview = () => {
-    if (!newPageTitle.trim() || !newPageContent.trim()) {
-      toast({
-        title: "Preview Error",
-        description: "Please fill in the title and content before previewing.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const nextPageNumber = pages.length + 1;
-    setPreviewPage({
-      page_number: nextPageNumber,
-      title: newPageTitle.trim(),
-      content: newPageContent.trim(),
-      image_url: newPageImage.trim() || undefined
-    });
+  const handlePreview = (page: Page) => {
+    setPreviewPage(page);
     setCurrentView('preview');
+  };
+
+  const processContentWithImages = (content: string) => {
+    return content.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/gi, 
+      '<img src="$1" alt="Story image" class="w-full rounded-lg my-4 shadow-lg" />');
   };
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center gradient-literary">
-        <Card className="w-full max-w-md story-shadow">
-          <CardHeader>
-            <CardTitle className="text-center flex items-center justify-center gap-2">
-              <Lock className="h-5 w-5 text-primary" />
-              Admin Access
-            </CardTitle>
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <Card className="glass-panel w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl text-foreground">Admin Login</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter admin password"
-                onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-              />
-            </div>
-            <Button onClick={handleLogin} className="w-full">
-              Login
-            </Button>
-            <Button variant="outline" onClick={onClose} className="w-full">
-              Back to Story
-            </Button>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <Label htmlFor="password" className="text-foreground">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter admin password"
+                  className="bg-background/50 border-white/20"
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full">
+                Login
+              </Button>
+            </form>
           </CardContent>
         </Card>
       </div>
@@ -252,282 +289,342 @@ export function AdminPanel({ onClose }: AdminPanelProps) {
   }
 
   return (
-    <div className="min-h-screen gradient-literary">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="min-h-screen p-6 pb-24">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="story-title text-3xl text-primary">Admin Panel</h1>
-          <Button variant="outline" onClick={onClose}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Story
-          </Button>
+        <div className="glass-panel p-4 mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={onClose} className="text-white">
+              <X className="h-4 w-4 mr-2" />
+              Close Admin
+            </Button>
+            
+            {currentView !== 'stories' && (
+              <Button variant="ghost" onClick={() => {
+                if (currentView === 'chapters') setCurrentView('stories');
+                else if (currentView === 'pages') setCurrentView('chapters');
+                else setCurrentView('stories');
+              }} className="text-white">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+            )}
+          </div>
+          
+          <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
         </div>
 
-        {/* Navigation Breadcrumb */}
-        <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setCurrentView('stories')}
-            className={currentView === 'stories' ? 'text-primary' : ''}
-          >
-            Stories
-          </Button>
-          {selectedStory && (
-            <>
-              <span>/</span>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setCurrentView('chapters')}
-                className={currentView === 'chapters' ? 'text-primary' : ''}
-              >
-                {selectedStory.title}
-              </Button>
-            </>
-          )}
-          {selectedChapter && (
-            <>
-              <span>/</span>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setCurrentView('pages')}
-                className={currentView === 'pages' ? 'text-primary' : ''}
-              >
-                Chapter {selectedChapter.chapter_number}
-              </Button>
-            </>
-          )}
-        </div>
+        {/* Main Content */}
+        <Tabs value={currentView} onValueChange={(value) => setCurrentView(value as any)} className="space-y-6">
+          <TabsList className="glass-panel grid w-full grid-cols-4 p-1">
+            <TabsTrigger value="stories">Stories</TabsTrigger>
+            <TabsTrigger value="add-story">Add Story</TabsTrigger>
+            <TabsTrigger value="pdf-upload">PDF Upload</TabsTrigger>
+            <TabsTrigger value="preview" disabled={!previewPage}>Preview</TabsTrigger>
+          </TabsList>
 
-        {/* Content */}
-        {currentView === 'stories' && (
-          <div className="space-y-6">
-            <Card className="story-shadow">
+          {/* Stories List */}
+          <TabsContent value="stories">
+            <Card className="glass-panel">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Book className="h-5 w-5" />
-                  Select a Story to Manage
-                </CardTitle>
+                <CardTitle className="text-foreground">Manage Stories</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4">
+                <div className="space-y-4">
                   {stories.map((story) => (
-                    <div 
-                      key={story.id}
-                      className="p-4 border rounded-lg cursor-pointer hover:bg-accent/50 transition-colors"
-                      onClick={() => {
-                        setSelectedStory(story);
-                        loadChapters(story.id);
-                        setCurrentView('chapters');
-                      }}
-                    >
-                      <h3 className="font-semibold text-primary">{story.title}</h3>
-                      <p className="text-sm text-muted-foreground">{story.description}</p>
+                    <div key={story.id} className="flex items-center justify-between p-4 border rounded-lg border-white/20">
+                      <div className="flex items-center gap-4">
+                        {story.cover_image_url && (
+                          <img 
+                            src={story.cover_image_url} 
+                            alt={story.title}
+                            className="w-16 h-20 object-cover rounded"
+                          />
+                        )}
+                        <div>
+                          <h3 className="font-semibold text-foreground">{story.title}</h3>
+                          <p className="text-sm text-muted-foreground">{story.description}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedStory(story);
+                            loadChapters(story.id);
+                            setCurrentView('chapters');
+                          }}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Manage
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => deleteStory(story.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {currentView === 'chapters' && selectedStory && (
-          <div className="space-y-6">
-            <Card className="story-shadow">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Chapters in "{selectedStory.title}"</CardTitle>
-                <Button onClick={() => setCurrentView('add-chapter')}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Chapter
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4">
-                  {chapters.map((chapter) => (
-                    <div 
-                      key={chapter.id}
-                      className="p-4 border rounded-lg cursor-pointer hover:bg-accent/50 transition-colors"
-                      onClick={() => {
-                        setSelectedChapter(chapter);
-                        loadPages(chapter.id);
-                        setCurrentView('pages');
-                      }}
-                    >
-                      <h3 className="font-semibold text-primary">
-                        Chapter {chapter.chapter_number}: {chapter.title}
-                      </h3>
+                  
+                  {stories.length === 0 && (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">No stories yet. Create your first story!</p>
                     </div>
-                  ))}
-                  {chapters.length === 0 && (
-                    <p className="text-center text-muted-foreground py-8">
-                      No chapters yet. Create your first chapter to get started!
-                    </p>
                   )}
                 </div>
               </CardContent>
             </Card>
-          </div>
-        )}
+          </TabsContent>
 
-        {currentView === 'pages' && selectedChapter && (
-          <div className="space-y-6">
-            <Card className="story-shadow">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>
-                  Pages in Chapter {selectedChapter.chapter_number}: {selectedChapter.title}
-                </CardTitle>
-                <Button onClick={() => setCurrentView('add-page')}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Next Page
-                </Button>
+          {/* Add Story */}
+          <TabsContent value="add-story">
+            <Card className="glass-panel">
+              <CardHeader>
+                <CardTitle className="text-foreground">Create New Story</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4">
-                  {pages.map((page) => (
-                    <div key={page.id} className="p-4 border rounded-lg">
-                      <h3 className="font-semibold text-primary">
-                        Page {page.page_number}: {page.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {page.content.substring(0, 150)}...
-                      </p>
-                    </div>
-                  ))}
-                  {pages.length === 0 && (
-                    <p className="text-center text-muted-foreground py-8">
-                      No pages yet. Add the first page to start this chapter!
-                    </p>
-                  )}
-                </div>
+                <form onSubmit={createStory} className="space-y-4">
+                  <div>
+                    <Label htmlFor="story-title" className="text-foreground">Story Title *</Label>
+                    <Input
+                      id="story-title"
+                      value={newStoryTitle}
+                      onChange={(e) => setNewStoryTitle(e.target.value)}
+                      placeholder="Enter story title"
+                      className="bg-background/50 border-white/20"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="story-description" className="text-foreground">Description</Label>
+                    <Textarea
+                      id="story-description"
+                      value={newStoryDescription}
+                      onChange={(e) => setNewStoryDescription(e.target.value)}
+                      placeholder="Brief description of the story"
+                      rows={3}
+                      className="bg-background/50 border-white/20"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="story-cover" className="text-foreground">Cover Image</Label>
+                    <Input
+                      id="story-cover"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setNewStoryCover(e.target.files?.[0] || null)}
+                      className="bg-background/50 border-white/20"
+                    />
+                  </div>
+
+                  <Button type="submit" className="w-full">
+                    Create Story
+                  </Button>
+                </form>
               </CardContent>
             </Card>
-          </div>
-        )}
+          </TabsContent>
 
-        {currentView === 'add-chapter' && (
-          <Card className="story-shadow">
-            <CardHeader>
-              <CardTitle>Create New Chapter</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="chapter-title">Chapter Title</Label>
-                <Input
-                  id="chapter-title"
-                  value={newChapterTitle}
-                  onChange={(e) => setNewChapterTitle(e.target.value)}
-                  placeholder="Enter chapter title"
-                />
-                <p className="text-sm text-muted-foreground mt-1">
-                  This will be Chapter {chapters.length + 1}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={createChapter} disabled={!newChapterTitle.trim()}>
-                  Create Chapter
-                </Button>
-                <Button variant="outline" onClick={() => setCurrentView('chapters')}>
-                  Cancel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+          {/* PDF Upload */}
+          <TabsContent value="pdf-upload">
+            <PDFUploader onStoryCreated={() => {
+              loadStories();
+              setCurrentView('stories');
+            }} />
+          </TabsContent>
 
-        {currentView === 'add-page' && (
-          <Card className="story-shadow">
-            <CardHeader>
-              <CardTitle>Add Next Page (Page {pages.length + 1})</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="page-title">Page Title</Label>
-                <Input
-                  id="page-title"
-                  value={newPageTitle}
-                  onChange={(e) => setNewPageTitle(e.target.value)}
-                  placeholder="Enter page title"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="page-image">Image URL (Optional)</Label>
-                <Input
-                  id="page-image"
-                  value={newPageImage}
-                  onChange={(e) => setNewPageImage(e.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                />
-              </div>
+          {/* Chapters Management */}
+          <TabsContent value="chapters">
+            {selectedStory && (
+              <Card className="glass-panel">
+                <CardHeader>
+                  <CardTitle className="text-foreground">
+                    Chapters for "{selectedStory.title}"
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <Button
+                      onClick={() => setCurrentView('add-chapter')}
+                      className="mb-4"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Chapter
+                    </Button>
 
-              <div>
-                <Label htmlFor="page-content">Page Content</Label>
-                <Textarea
-                  id="page-content"
-                  value={newPageContent}
-                  onChange={(e) => setNewPageContent(e.target.value)}
-                  placeholder="Write your story content here..."
-                  className="min-h-[200px]"
-                />
-              </div>
+                    {chapters.map((chapter) => (
+                      <div key={chapter.id} className="flex items-center justify-between p-4 border rounded-lg border-white/20">
+                        <div>
+                          <h3 className="font-semibold text-foreground">
+                            Chapter {chapter.chapter_number}: {chapter.title}
+                          </h3>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedChapter(chapter);
+                            loadPages(chapter.id);
+                            setCurrentView('pages');
+                          }}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Manage Pages
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
 
-              <div className="flex gap-2">
-                <Button onClick={handlePreview} variant="outline">
-                  <Eye className="mr-2 h-4 w-4" />
-                  Preview
-                </Button>
-                <Button 
-                  onClick={createPage} 
-                  disabled={!newPageTitle.trim() || !newPageContent.trim()}
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  Post Now
-                </Button>
-                <Button variant="outline" onClick={() => setCurrentView('pages')}>
-                  Cancel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+          {/* Add Chapter */}
+          <TabsContent value="add-chapter">
+            <Card className="glass-panel">
+              <CardHeader>
+                <CardTitle className="text-foreground">Add New Chapter</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={createChapter} className="space-y-4">
+                  <div>
+                    <Label htmlFor="chapter-title" className="text-foreground">Chapter Title *</Label>
+                    <Input
+                      id="chapter-title"
+                      value={newChapterTitle}
+                      onChange={(e) => setNewChapterTitle(e.target.value)}
+                      placeholder="Enter chapter title"
+                      className="bg-background/50 border-white/20"
+                      required
+                    />
+                  </div>
 
-        {currentView === 'preview' && previewPage && (
-          <div className="space-y-6">
-            <Card className="p-8 md:p-12 story-shadow animate-scale-in">
-              <h2 className="story-title text-2xl md:text-3xl text-primary mb-6">
-                {previewPage.title}
-              </h2>
-              
-              {previewPage.image_url && (
-                <div className="mb-6">
-                  <img 
-                    src={previewPage.image_url} 
-                    alt={previewPage.title}
-                    className="w-full rounded-lg shadow-md"
-                  />
-                </div>
-              )}
-              
-              <div className="story-content text-foreground leading-relaxed">
-                {previewPage.content}
-              </div>
+                  <Button type="submit" className="w-full">
+                    Create Chapter
+                  </Button>
+                </form>
+              </CardContent>
             </Card>
+          </TabsContent>
 
-            <div className="flex gap-2">
-              <Button onClick={createPage}>
-                <FileText className="mr-2 h-4 w-4" />
-                Publish Page
-              </Button>
-              <Button variant="outline" onClick={() => setCurrentView('add-page')}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Edit
-              </Button>
-            </div>
-          </div>
-        )}
+          {/* Pages Management */}
+          <TabsContent value="pages">
+            {selectedChapter && (
+              <Card className="glass-panel">
+                <CardHeader>
+                  <CardTitle className="text-foreground">
+                    Pages for "{selectedChapter.title}"
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <Button
+                      onClick={() => setCurrentView('add-page')}
+                      className="mb-4"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Page
+                    </Button>
+
+                    {pages.map((page) => (
+                      <div key={page.id} className="flex items-center justify-between p-4 border rounded-lg border-white/20">
+                        <div>
+                          <h3 className="font-semibold text-foreground">
+                            Page {page.page_number}: {page.title}
+                          </h3>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {page.content.slice(0, 100)}...
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePreview(page)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Preview
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Add Page */}
+          <TabsContent value="add-page">
+            <Card className="glass-panel">
+              <CardHeader>
+                <CardTitle className="text-foreground">Add New Page</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={createPage} className="space-y-4">
+                  <div>
+                    <Label htmlFor="page-title" className="text-foreground">Page Title *</Label>
+                    <Input
+                      id="page-title"
+                      value={newPageTitle}
+                      onChange={(e) => setNewPageTitle(e.target.value)}
+                      placeholder="Enter page title"
+                      className="bg-background/50 border-white/20"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="page-content" className="text-foreground">Content *</Label>
+                    <Textarea
+                      id="page-content"
+                      value={newPageContent}
+                      onChange={(e) => setNewPageContent(e.target.value)}
+                      placeholder="Enter page content (paste image URLs directly in text to embed images)"
+                      rows={8}
+                      className="bg-background/50 border-white/20"
+                      required
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Tip: Paste image URLs directly in your text to embed images inline
+                    </p>
+                  </div>
+
+                  <Button type="submit" className="w-full">
+                    Create Page
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Preview */}
+          <TabsContent value="preview">
+            {previewPage && (
+              <Card className="glass-panel">
+                <CardHeader>
+                  <CardTitle className="text-foreground">Page Preview</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <h2 className="text-2xl font-bold text-foreground">{previewPage.title}</h2>
+                    <div 
+                      className="story-content text-foreground leading-relaxed"
+                      dangerouslySetInnerHTML={{ 
+                        __html: processContentWithImages(previewPage.content)
+                      }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
-}
+};
