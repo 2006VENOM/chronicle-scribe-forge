@@ -119,6 +119,11 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-image: url('/src/assets/venom-wallpaper.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
   }
 
   /* Typography for storytelling */
