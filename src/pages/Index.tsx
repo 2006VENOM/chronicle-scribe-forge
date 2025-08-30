@@ -51,11 +51,7 @@ const Index = () => {
       <Navigation 
         onAdminClick={() => setCurrentView('admin')}
         onHomeClick={handleBackToHome}
-        currentView={
-          currentView === 'admin' ? 'admin' : 
-          currentView === 'story' ? 'story' : 
-          'home'
-        }
+        currentView={currentView as 'home' | 'story' | 'admin'}
       />
     </div>
   );
