@@ -175,6 +175,6 @@ All colors MUST be HSL.
   }
 
   .story-cover {
-    @apply rounded-xl overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105 cursor-pointer;
+    @apply rounded-xl overflow-hidden shadow-2xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer;
   }
 }
