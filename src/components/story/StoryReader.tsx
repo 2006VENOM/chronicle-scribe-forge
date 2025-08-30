@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Heart, MessageSquare, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, MessageSquare, User, Plus, Minus, Settings2, Reply } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 
 interface Page {
@@ -41,6 +42,10 @@ interface PageComment {
   user_name: string;
   content: string;
   created_at: string;
+  parent_comment_id?: string;
+  likes?: number;
+  isLiked?: boolean;
+  replies?: PageComment[];
 }
 
 export function StoryReader() {
@@ -53,6 +58,9 @@ export function StoryReader() {
   const [newComment, setNewComment] = useState("");
   const [commenterName, setCommenterName] = useState("");
   const [loading, setLoading] = useState(true);
+  const [readingSpeed, setReadingSpeed] = useState(1);
+  const [textSize, setTextSize] = useState(16);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const { toast } = useToast();
 
   const getUserSession = () => {
@@ -145,12 +153,79 @@ export function StoryReader() {
         .from('page_comments')
         .select('*')
         .eq('page_id', pageId)
+        .is('parent_comment_id', null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setComments(data || []);
+      
+      const commentsWithExtras = await Promise.all((data || []).map(async (comment) => {
+        const [likesData, repliesData] = await Promise.all([
+          loadCommentLikes(comment.id),
+          loadCommentReplies(comment.id)
+        ]);
+        
+        return {
+          ...comment,
+          likes: likesData.count,
+          isLiked: likesData.isLiked,
+          replies: repliesData
+        };
+      }));
+      
+      setComments(commentsWithExtras);
     } catch (error) {
       console.error('Error loading comments:', error);
+    }
+  };
+
+  const loadCommentLikes = async (commentId: string) => {
+    try {
+      const { count, error } = await supabase
+        .from('comment_likes')
+        .select('*', { count: 'exact', head: true })
+        .eq('comment_id', commentId);
+
+      if (error) throw error;
+
+      const userSession = getUserSession();
+      const { data, error: checkError } = await supabase
+        .from('comment_likes')
+        .select('id')
+        .eq('comment_id', commentId)
+        .eq('user_session', userSession);
+
+      if (checkError) throw checkError;
+      
+      return { count: count || 0, isLiked: data && data.length > 0 };
+    } catch (error) {
+      console.error('Error loading comment likes:', error);
+      return { count: 0, isLiked: false };
+    }
+  };
+
+  const loadCommentReplies = async (commentId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('page_comments')
+        .select('*')
+        .eq('parent_comment_id', commentId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      
+      const repliesWithExtras = await Promise.all((data || []).map(async (reply) => {
+        const likesData = await loadCommentLikes(reply.id);
+        return {
+          ...reply,
+          likes: likesData.count,
+          isLiked: likesData.isLiked
+        };
+      }));
+      
+      return repliesWithExtras;
+    } catch (error) {
+      console.error('Error loading replies:', error);
+      return [];
     }
   };
 
@@ -206,18 +281,20 @@ export function StoryReader() {
         .insert({
           page_id: currentPage.id,
           user_name: commenterName.trim(),
-          content: newComment.trim()
+          content: newComment.trim(),
+          parent_comment_id: replyingTo
         })
         .select();
 
       if (error) throw error;
 
       if (data) {
-        setComments(prev => [data[0], ...prev]);
         setNewComment("");
+        setReplyingTo(null);
+        await loadComments(currentPage.id); // Reload to get updated structure
         toast({
-          title: "Comment Added",
-          description: "Your comment has been posted successfully."
+          title: replyingTo ? "Reply Added" : "Comment Added",
+          description: `Your ${replyingTo ? 'reply' : 'comment'} has been posted successfully.`
         });
       }
     } catch (error) {
@@ -228,6 +305,59 @@ export function StoryReader() {
         variant: "destructive"
       });
     }
+  };
+
+  const handleCommentLike = async (commentId: string) => {
+    const userSession = getUserSession();
+    
+    try {
+      const comment = findCommentById(commentId, comments);
+      if (!comment) return;
+
+      if (comment.isLiked) {
+        // Unlike
+        const { error } = await supabase
+          .from('comment_likes')
+          .delete()
+          .eq('comment_id', commentId)
+          .eq('user_session', userSession);
+
+        if (error) throw error;
+      } else {
+        // Like
+        const { error } = await supabase
+          .from('comment_likes')
+          .insert({
+            comment_id: commentId,
+            user_session: userSession
+          });
+
+        if (error) throw error;
+      }
+      
+      // Reload comments to update like counts
+      if (currentPage) {
+        await loadComments(currentPage.id);
+      }
+    } catch (error) {
+      console.error('Error toggling comment like:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update like. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const findCommentById = (id: string, commentList: PageComment[]): PageComment | null => {
+    for (const comment of commentList) {
+      if (comment.id === id) return comment;
+      if (comment.replies) {
+        const found = findCommentById(id, comment.replies);
+        if (found) return found;
+      }
+    }
+    return null;
   };
 
   const navigateToPage = async (direction: 'prev' | 'next') => {
@@ -359,9 +489,53 @@ export function StoryReader() {
           </p>
         </div>
 
+        {/* Reading Controls */}
+        <Card className="p-6 mb-8 story-shadow">
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="flex items-center gap-3">
+              <Settings2 className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Speed:</span>
+              <div className="flex items-center gap-2">
+                {[0.5, 0.75, 1, 1.25, 1.5, 2].map((speed) => (
+                  <Button
+                    key={speed}
+                    size="sm"
+                    variant={readingSpeed === speed ? "default" : "outline"}
+                    onClick={() => setReadingSpeed(speed)}
+                    className="text-xs px-2 py-1"
+                  >
+                    {speed}x
+                  </Button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium">Text Size:</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setTextSize(Math.max(12, textSize - 2))}
+                disabled={textSize <= 12}
+              >
+                <Minus className="h-3 w-3" />
+              </Button>
+              <span className="text-sm min-w-[3rem] text-center">{textSize}px</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setTextSize(Math.min(24, textSize + 2))}
+                disabled={textSize >= 24}
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        </Card>
+
         {/* Main Content */}
         <Card className="p-8 md:p-12 mb-8 story-shadow animate-scale-in">
-          <h2 className="story-title text-2xl md:text-3xl text-primary mb-6">
+          <h2 className="story-title text-2xl md:text-3xl text-black mb-6">
             {currentPage.title}
           </h2>
           
@@ -375,7 +549,13 @@ export function StoryReader() {
             </div>
           )}
           
-          <div className="story-content text-foreground leading-relaxed">
+          <div 
+            className="story-content text-black leading-relaxed"
+            style={{ 
+              fontSize: `${textSize}px`,
+              animationDuration: `${3 / readingSpeed}s`
+            }}
+          >
             {currentPage.content}
           </div>
         </Card>
@@ -388,7 +568,7 @@ export function StoryReader() {
             disabled={loading}
             className="page-transition"
           >
-            <ChevronLeft className="mr-2 h-4 w-4" />
+            <span className="mr-2 text-lg">⬅️</span>
             Previous
           </Button>
           
@@ -399,7 +579,7 @@ export function StoryReader() {
             className="page-transition"
           >
             Next
-            <ChevronRight className="ml-2 h-4 w-4" />
+            <span className="ml-2 text-lg">➡️</span>
           </Button>
         </div>
 
@@ -427,6 +607,21 @@ export function StoryReader() {
 
             {/* Add Comment */}
             <form onSubmit={handleComment} className="space-y-3 p-4 bg-secondary/50 rounded-lg">
+              {replyingTo && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Reply className="h-3 w-3" />
+                  <span>Replying to comment</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setReplyingTo(null)}
+                    className="h-6 px-2 text-xs"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
               <div className="flex gap-3">
                 <Input
                   placeholder="Your name"
@@ -436,7 +631,7 @@ export function StoryReader() {
                 />
               </div>
               <Textarea
-                placeholder="Share your thoughts about this page..."
+                placeholder={replyingTo ? "Write your reply..." : "Share your thoughts about this page..."}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 className="min-h-[80px]"
@@ -446,23 +641,19 @@ export function StoryReader() {
                 size="sm"
                 disabled={!newComment.trim() || !commenterName.trim()}
               >
-                Post Comment
+                {replyingTo ? 'Post Reply' : 'Post Comment'}
               </Button>
             </form>
 
             {/* Comments List */}
             <div className="space-y-4">
               {comments.map((comment) => (
-                <div key={comment.id} className="p-4 bg-card border rounded-lg animate-fade-in">
-                  <div className="flex items-center gap-2 mb-2">
-                    <User className="h-4 w-4 text-primary" />
-                    <span className="font-semibold text-sm text-primary">{comment.user_name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(comment.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <p className="text-sm text-foreground">{comment.content}</p>
-                </div>
+                <CommentCard 
+                  key={comment.id} 
+                  comment={comment} 
+                  onLike={handleCommentLike}
+                  onReply={setReplyingTo}
+                />
               ))}
               
               {comments.length === 0 && (
@@ -477,3 +668,68 @@ export function StoryReader() {
     </div>
   );
 }
+
+const CommentCard = ({ 
+  comment, 
+  onLike, 
+  onReply, 
+  depth = 0 
+}: { 
+  comment: PageComment; 
+  onLike: (id: string) => void; 
+  onReply: (id: string) => void;
+  depth?: number;
+}) => {
+  return (
+    <div className={`animate-fade-in ${depth > 0 ? 'ml-8 border-l-2 border-primary/20 pl-4' : ''}`}>
+      <div className="p-4 bg-card border rounded-lg">
+        <div className="flex items-center gap-2 mb-2">
+          <User className="h-4 w-4 text-primary" />
+          <span className="font-semibold text-sm text-black">{comment.user_name}</span>
+          <span className="text-xs text-muted-foreground">
+            {new Date(comment.created_at).toLocaleDateString()}
+          </span>
+        </div>
+        <p className="text-sm text-black mb-3">{comment.content}</p>
+        
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => onLike(comment.id)}
+            className={`text-xs h-auto py-1 px-2 ${comment.isLiked ? 'text-accent' : 'text-muted-foreground'}`}
+          >
+            <Heart className={`mr-1 h-3 w-3 ${comment.isLiked ? 'fill-current' : ''}`} />
+            {comment.likes || 0}
+          </Button>
+          
+          {depth < 2 && (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => onReply(comment.id)}
+              className="text-xs h-auto py-1 px-2 text-muted-foreground"
+            >
+              <Reply className="mr-1 h-3 w-3" />
+              Reply
+            </Button>
+          )}
+        </div>
+      </div>
+      
+      {comment.replies && comment.replies.length > 0 && (
+        <div className="mt-3 space-y-3">
+          {comment.replies.map((reply) => (
+            <CommentCard 
+              key={reply.id} 
+              comment={reply} 
+              onLike={onLike}
+              onReply={onReply}
+              depth={depth + 1}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};

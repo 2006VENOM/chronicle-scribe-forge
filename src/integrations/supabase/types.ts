@@ -85,6 +85,35 @@ export type Database = {
           },
         ]
       }
+      comment_likes: {
+        Row: {
+          comment_id: string
+          created_at: string
+          id: string
+          user_session: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          id?: string
+          user_session: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          id?: string
+          user_session?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_likes_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "page_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       connections: {
         Row: {
           created_at: string | null
@@ -286,6 +315,7 @@ export type Database = {
           created_at: string
           id: string
           page_id: string
+          parent_comment_id: string | null
           user_name: string
         }
         Insert: {
@@ -293,6 +323,7 @@ export type Database = {
           created_at?: string
           id?: string
           page_id: string
+          parent_comment_id?: string | null
           user_name: string
         }
         Update: {
@@ -300,6 +331,7 @@ export type Database = {
           created_at?: string
           id?: string
           page_id?: string
+          parent_comment_id?: string | null
           user_name?: string
         }
         Relationships: [
@@ -308,6 +340,13 @@ export type Database = {
             columns: ["page_id"]
             isOneToOne: false
             referencedRelation: "pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "page_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "page_comments"
             referencedColumns: ["id"]
           },
         ]
