@@ -8,9 +8,9 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Literary color palette - No pure whites, use glass panels */
+    /* VENOM color palette - Black text, blue accents */
     --background: 230 15% 8%;
-    --foreground: 35 25% 95%;
+    --foreground: 0 0% 0%;
 
     --card: 0 0% 98%;
     --card-foreground: 230 15% 15%;
@@ -18,10 +18,10 @@ All colors MUST be HSL.
     --popover: 0 0% 98%;
     --popover-foreground: 230 15% 15%;
 
-    /* Deep literary navy */
-    --primary: 230 45% 25%;
+    /* VENOM Blue Theme */
+    --primary: 210 100% 50%;
     --primary-foreground: 0 0% 98%;
-    --primary-glow: 230 55% 65%;
+    --primary-glow: 210 80% 65%;
 
     /* Warm paper tones */
     --secondary: 35 25% 95%;
@@ -63,9 +63,9 @@ All colors MUST be HSL.
   }
 
   .dark {
-    /* Dark mode literary theme */
+    /* Dark mode VENOM theme */
     --background: 230 25% 8%;
-    --foreground: 35 25% 95%;
+    --foreground: 0 0% 0%;
 
     --card: 0 0% 98%;
     --card-foreground: 230 15% 15%;
@@ -73,10 +73,10 @@ All colors MUST be HSL.
     --popover: 0 0% 98%;
     --popover-foreground: 230 15% 15%;
 
-    /* Lighter primary for dark mode */
-    --primary: 230 55% 75%;
-    --primary-foreground: 230 25% 15%;
-    --primary-glow: 230 65% 85%;
+    /* VENOM Blue for dark mode */
+    --primary: 210 100% 60%;
+    --primary-foreground: 0 0% 0%;
+    --primary-glow: 210 90% 75%;
 
     /* Dark paper tones */
     --secondary: 230 20% 15%;

@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Home, Settings } from "lucide-react";
 
 interface NavigationProps {
   onAdminClick: () => void;
@@ -17,7 +16,7 @@ export const Navigation = ({ onAdminClick, onHomeClick, currentView }: Navigatio
           size="sm"
           className="flex flex-col items-center gap-1 h-auto py-2"
         >
-          <Home className="h-5 w-5" />
+          <span className="text-lg">🏠</span>
           <span className="text-xs">Home</span>
         </Button>
         
@@ -27,7 +26,7 @@ export const Navigation = ({ onAdminClick, onHomeClick, currentView }: Navigatio
           size="sm"
           className="flex flex-col items-center gap-1 h-auto py-2"
         >
-          <Settings className="h-5 w-5" />
+          <span className="text-lg">⚙️</span>
           <span className="text-xs">Admin</span>
         </Button>
       </div>
