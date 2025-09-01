@@ -191,6 +191,52 @@ export const AdminPanel = ({ onClose }: AdminPanelProps) => {
     }
   };
 
+  const deleteChapter = async (chapterId: string) => {
+    if (!confirm("Are you sure you want to delete this chapter and all its pages? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('chapters')
+        .delete()
+        .eq('id', chapterId);
+
+      if (error) throw error;
+
+      toast.success("Chapter deleted successfully!");
+      if (selectedStory) {
+        loadChapters(selectedStory.id);
+      }
+    } catch (error) {
+      console.error('Error deleting chapter:', error);
+      toast.error("Failed to delete chapter");
+    }
+  };
+
+  const deletePage = async (pageId: string) => {
+    if (!confirm("Are you sure you want to delete this page? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('pages')
+        .delete()
+        .eq('id', pageId);
+
+      if (error) throw error;
+
+      toast.success("Page deleted successfully!");
+      if (selectedChapter) {
+        loadPages(selectedChapter.id);
+      }
+    } catch (error) {
+      console.error('Error deleting page:', error);
+      toast.error("Failed to delete page");
+    }
+  };
+
   const createChapter = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newChapterTitle || !selectedStory) return;
@@ -458,27 +504,36 @@ export const AdminPanel = ({ onClose }: AdminPanelProps) => {
                       Add Chapter
                     </Button>
 
-                    {chapters.map((chapter) => (
-                      <div key={chapter.id} className="flex items-center justify-between p-4 border rounded-lg border-white/20">
-                        <div>
-                          <h3 className="font-semibold text-foreground">
-                            Chapter {chapter.chapter_number}: {chapter.title}
-                          </h3>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedChapter(chapter);
-                            loadPages(chapter.id);
-                            setCurrentView('pages');
-                          }}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          Manage Pages
-                        </Button>
-                      </div>
-                    ))}
+                     {chapters.map((chapter) => (
+                       <div key={chapter.id} className="flex items-center justify-between p-4 border rounded-lg border-white/20">
+                         <div>
+                           <h3 className="font-semibold text-foreground">
+                             Chapter {chapter.chapter_number}: {chapter.title}
+                           </h3>
+                         </div>
+                         <div className="flex gap-2">
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={() => {
+                               setSelectedChapter(chapter);
+                               loadPages(chapter.id);
+                               setCurrentView('pages');
+                             }}
+                           >
+                             <Eye className="h-4 w-4 mr-2" />
+                             Manage Pages
+                           </Button>
+                           <Button
+                             variant="destructive"
+                             size="sm"
+                             onClick={() => deleteChapter(chapter.id)}
+                           >
+                             <Trash2 className="h-4 w-4" />
+                           </Button>
+                         </div>
+                       </div>
+                     ))}
                   </div>
                 </CardContent>
               </Card>
@@ -532,26 +587,35 @@ export const AdminPanel = ({ onClose }: AdminPanelProps) => {
                       Add Page
                     </Button>
 
-                    {pages.map((page) => (
-                      <div key={page.id} className="flex items-center justify-between p-4 border rounded-lg border-white/20">
-                        <div>
-                          <h3 className="font-semibold text-foreground">
-                            Page {page.page_number}: {page.title}
-                          </h3>
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {page.content.slice(0, 100)}...
-                          </p>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePreview(page)}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          Preview
-                        </Button>
-                      </div>
-                    ))}
+                     {pages.map((page) => (
+                       <div key={page.id} className="flex items-center justify-between p-4 border rounded-lg border-white/20">
+                         <div>
+                           <h3 className="font-semibold text-foreground">
+                             Page {page.page_number}: {page.title}
+                           </h3>
+                           <p className="text-sm text-muted-foreground line-clamp-2">
+                             {page.content.slice(0, 100)}...
+                           </p>
+                         </div>
+                         <div className="flex gap-2">
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={() => handlePreview(page)}
+                           >
+                             <Eye className="h-4 w-4 mr-2" />
+                             Preview
+                           </Button>
+                           <Button
+                             variant="destructive"
+                             size="sm"
+                             onClick={() => deletePage(page.id)}
+                           >
+                             <Trash2 className="h-4 w-4" />
+                           </Button>
+                         </div>
+                       </div>
+                     ))}
                   </div>
                 </CardContent>
               </Card>
