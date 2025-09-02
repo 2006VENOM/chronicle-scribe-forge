@@ -107,7 +107,7 @@ export const StoryGrid = ({ onStorySelect }: StoryGridProps) => {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 gap-4 p-4">
             {filteredStories.map((story) => (
               <Card
                 key={story.id}
@@ -116,7 +116,7 @@ export const StoryGrid = ({ onStorySelect }: StoryGridProps) => {
               >
                 <CardContent className="p-0">
                   {/* Cover Image */}
-                  <div className="aspect-[2/3] relative overflow-hidden rounded-t-lg">
+                  <div className="aspect-[3/4] relative overflow-hidden rounded-t-lg">
                     {story.cover_image_url ? (
                       <img
                         src={story.cover_image_url}

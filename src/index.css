@@ -8,12 +8,12 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* VENOM color palette - Black text, blue accents */
-    --background: 230 15% 8%;
-    --foreground: 0 0% 0%;
+    /* Black background, white text theme */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
 
-    --card: 0 0% 98%;
-    --card-foreground: 230 15% 15%;
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 100%;
 
     --popover: 0 0% 98%;
     --popover-foreground: 230 15% 15%;
@@ -63,12 +63,12 @@ All colors MUST be HSL.
   }
 
   .dark {
-    /* Dark mode VENOM theme */
-    --background: 230 25% 8%;
-    --foreground: 0 0% 0%;
+    /* Dark mode theme */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
 
-    --card: 0 0% 98%;
-    --card-foreground: 230 15% 15%;
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 100%;
 
     --popover: 0 0% 98%;
     --popover-foreground: 230 15% 15%;
@@ -119,11 +119,6 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background-image: url('/src/assets/venom-wallpaper.jpg');
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
-    background-repeat: no-repeat;
   }
 
   /* Typography for storytelling */

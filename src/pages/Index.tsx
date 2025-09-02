@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Navigation } from "@/components/navigation/Navigation";
-import { AdminPanel } from "@/components/admin/AdminPanel";
 import { SplashScreen } from "@/components/ui/splash-screen";
 import { StoryGrid } from "@/components/story/StoryGrid";
 import { StoryDetail } from "@/components/story/StoryDetail";
+import { SettingsPanel } from "@/components/settings/SettingsPanel";
+import { TopMenu } from "@/components/ui/top-menu";
 
 interface Story {
   id: string;
@@ -17,7 +17,7 @@ interface Story {
 }
 
 const Index = () => {
-  const [currentView, setCurrentView] = useState<'splash' | 'home' | 'story' | 'admin'>('splash');
+  const [currentView, setCurrentView] = useState<'splash' | 'home' | 'story' | 'settings'>('splash');
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
 
   const handleSplashComplete = () => setCurrentView('home');
@@ -34,25 +34,26 @@ const Index = () => {
     return <SplashScreen onComplete={handleSplashComplete} />;
   }
 
-  if (currentView === 'admin') {
-    return <AdminPanel onClose={() => setCurrentView('home')} />;
+  if (currentView === 'settings') {
+    return <SettingsPanel onClose={() => setCurrentView('home')} />;
   }
 
   return (
     <div className="min-h-screen">
-      {currentView === 'home' && (
-        <StoryGrid onStorySelect={handleStorySelect} />
-      )}
-      
-      {currentView === 'story' && selectedStory && (
-        <StoryDetail story={selectedStory} onBack={handleBackToHome} />
-      )}
-
-      <Navigation 
-        onAdminClick={() => setCurrentView('admin')}
+      <TopMenu 
+        onSettingsClick={() => setCurrentView('settings')}
         onHomeClick={handleBackToHome}
-        currentView={currentView as 'home' | 'story' | 'admin'}
       />
+      
+      <div className="pt-16 pb-4">
+        {currentView === 'home' && (
+          <StoryGrid onStorySelect={handleStorySelect} />
+        )}
+        
+        {currentView === 'story' && selectedStory && (
+          <StoryDetail story={selectedStory} onBack={handleBackToHome} />
+        )}
+      </div>
     </div>
   );
 };
