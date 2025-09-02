@@ -40,7 +40,7 @@ interface AdminPanelProps {
 
 export const AdminPanel = ({ onClose }: AdminPanelProps) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState("");
+  const [password, setPassword] = useState(process.env.NEXT_PUBLIC_ADMIN_PASSWORD)
   const [currentView, setCurrentView] = useState<'stories' | 'chapters' | 'pages' | 'add-story' | 'add-chapter' | 'add-page' | 'preview' | 'pdf-upload'>('stories');
   
   const [stories, setStories] = useState<Story[]>([]);
