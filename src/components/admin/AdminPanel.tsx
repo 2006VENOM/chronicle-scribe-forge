@@ -140,24 +140,37 @@ export const AdminPanel = ({ onClose }: AdminPanelProps) => {
 
   const createStory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newStoryTitle) return;
+    if (!newStoryTitle) {
+      toast.error("Please enter a story title");
+      return;
+    }
+
+    console.log("Creating story with:", { title: newStoryTitle, description: newStoryDescription, hasCover: !!newStoryCover });
 
     try {
       let coverImageUrl = null;
       if (newStoryCover) {
+        console.log("Uploading cover image...");
         coverImageUrl = await uploadCoverImage(newStoryCover);
+        console.log("Cover uploaded:", coverImageUrl);
       }
 
-      const { error } = await supabase
+      console.log("Inserting story into database...");
+      const { data, error } = await supabase
         .from('stories')
         .insert({
           title: newStoryTitle,
-          description: newStoryDescription,
+          description: newStoryDescription || '',
           cover_image_url: coverImageUrl
-        });
+        })
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Database error:", error);
+        throw error;
+      }
 
+      console.log("Story created successfully:", data);
       toast.success("Story created successfully!");
       setNewStoryTitle("");
       setNewStoryDescription("");
@@ -166,7 +179,7 @@ export const AdminPanel = ({ onClose }: AdminPanelProps) => {
       loadStories();
     } catch (error) {
       console.error('Error creating story:', error);
-      toast.error("Failed to create story");
+      toast.error(`Failed to create story: ${error.message}`);
     }
   };
 

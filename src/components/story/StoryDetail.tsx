@@ -379,8 +379,9 @@ export const StoryDetail = ({ story, onBack }: StoryDetailProps) => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="glass-panel p-8">
-          <div className="animate-pulse text-center">
-            <div className="text-xl text-foreground">Loading Story...</div>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <div className="text-xl text-foreground animate-pulse">Loading Story...</div>
           </div>
         </div>
       </div>
@@ -563,7 +564,7 @@ export const StoryDetail = ({ story, onBack }: StoryDetailProps) => {
                   </Button>
                 </div>
               )}
-              <div className="flex gap-2">
+              <div className="flex gap-2 mb-2">
                 <input
                   type="text"
                   value={commenterName}
@@ -581,6 +582,14 @@ export const StoryDetail = ({ story, onBack }: StoryDetailProps) => {
                 <Button type="submit" disabled={!newComment.trim() || !commenterName.trim()}>
                   {replyingTo ? "Reply" : "Post"}
                 </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="text-sm text-muted-foreground file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-primary file:text-white hover:file:bg-primary/90"
+                />
+                <span className="text-xs text-muted-foreground">Optional: Add an image to your comment</span>
               </div>
             </div>
           </form>

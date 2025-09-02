@@ -62,8 +62,9 @@ export const StoryGrid = ({ onStorySelect }: StoryGridProps) => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="glass-panel p-8">
-          <div className="animate-pulse text-center">
-            <div className="text-xl text-foreground">Loading Stories...</div>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <div className="text-xl text-foreground animate-pulse">Loading Stories...</div>
           </div>
         </div>
       </div>
@@ -115,7 +116,7 @@ export const StoryGrid = ({ onStorySelect }: StoryGridProps) => {
               >
                 <CardContent className="p-0">
                   {/* Cover Image */}
-                  <div className="aspect-[3/4] relative overflow-hidden rounded-t-lg">
+                  <div className="aspect-[2/3] relative overflow-hidden rounded-t-lg">
                     {story.cover_image_url ? (
                       <img
                         src={story.cover_image_url}
