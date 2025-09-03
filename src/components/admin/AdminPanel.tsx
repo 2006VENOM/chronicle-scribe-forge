@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { X, Plus, Eye, Trash2, Upload, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { PDFUploader } from "./PDFUploader";
+
 
 interface Story {
   id: string;
@@ -41,7 +41,9 @@ interface AdminPanelProps {
 export const AdminPanel = ({ onClose }: AdminPanelProps) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
-  const [currentView, setCurrentView] = useState<'stories' | 'chapters' | 'pages' | 'add-story' | 'add-chapter' | 'add-page' | 'preview' | 'pdf-upload'>('stories');
+  const [currentView, setCurrentView] = useState<'stories' | 'chapters' | 'pages' | 'add-story' | 'add-chapter' | 'add-page' | 'preview'>('stories');
+  const [isCreating, setIsCreating] = useState(false);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   
   const [stories, setStories] = useState<Story[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -145,17 +147,14 @@ export const AdminPanel = ({ onClose }: AdminPanelProps) => {
       return;
     }
 
-    console.log("Creating story with:", { title: newStoryTitle, description: newStoryDescription, hasCover: !!newStoryCover });
+    setIsCreating(true);
 
     try {
       let coverImageUrl = null;
       if (newStoryCover) {
-        console.log("Uploading cover image...");
         coverImageUrl = await uploadCoverImage(newStoryCover);
-        console.log("Cover uploaded:", coverImageUrl);
       }
 
-      console.log("Inserting story into database...");
       const { data, error } = await supabase
         .from('stories')
         .insert({
@@ -165,21 +164,27 @@ export const AdminPanel = ({ onClose }: AdminPanelProps) => {
         })
         .select();
 
-      if (error) {
-        console.error("Database error:", error);
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log("Story created successfully:", data);
+      // Show success animation
+      setShowSuccessAnimation(true);
       toast.success("Story created successfully!");
-      setNewStoryTitle("");
-      setNewStoryDescription("");
-      setNewStoryCover(null);
-      setCurrentView('stories');
-      loadStories();
+      
+      // Reset form and show stories after animation
+      setTimeout(() => {
+        setNewStoryTitle("");
+        setNewStoryDescription("");
+        setNewStoryCover(null);
+        setShowSuccessAnimation(false);
+        setCurrentView('stories');
+        loadStories();
+      }, 2000);
+      
     } catch (error) {
       console.error('Error creating story:', error);
       toast.error(`Failed to create story: ${error.message}`);
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -375,10 +380,9 @@ export const AdminPanel = ({ onClose }: AdminPanelProps) => {
 
         {/* Main Content */}
         <Tabs value={currentView} onValueChange={(value) => setCurrentView(value as any)} className="space-y-6">
-          <TabsList className="glass-panel grid w-full grid-cols-4 p-1">
+          <TabsList className="glass-panel grid w-full grid-cols-3 p-1">
             <TabsTrigger value="stories">Stories</TabsTrigger>
             <TabsTrigger value="add-story">Add Story</TabsTrigger>
-            <TabsTrigger value="pdf-upload">PDF Upload</TabsTrigger>
             <TabsTrigger value="preview" disabled={!previewPage}>Preview</TabsTrigger>
           </TabsList>
 
@@ -446,57 +450,75 @@ export const AdminPanel = ({ onClose }: AdminPanelProps) => {
                 <CardTitle className="text-foreground">Create New Story</CardTitle>
               </CardHeader>
               <CardContent>
-                <form onSubmit={createStory} className="space-y-4">
-                  <div>
-                    <Label htmlFor="story-title" className="text-foreground">Story Title *</Label>
-                    <Input
-                      id="story-title"
-                      value={newStoryTitle}
-                      onChange={(e) => setNewStoryTitle(e.target.value)}
-                      placeholder="Enter story title"
-                      className="bg-background/50 border-white/20"
-                      required
-                    />
+                {showSuccessAnimation ? (
+                  <div className="text-center py-12 animate-fade-in">
+                    <div className="w-24 h-24 mx-auto mb-6 relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary-glow rounded-full animate-pulse"></div>
+                      <div className="absolute inset-2 bg-background rounded-full flex items-center justify-center">
+                        <div className="text-3xl animate-bounce">✨</div>
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-bold text-foreground mb-2 animate-scale-in">Story Created!</h3>
+                    <p className="text-muted-foreground animate-fade-in">Your story has been successfully created and is now available on the homepage.</p>
                   </div>
+                ) : (
+                  <div className={`transition-all duration-300 ${isCreating ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <form onSubmit={createStory} className="space-y-4">
+                      <div>
+                        <Label htmlFor="story-title" className="text-foreground">Story Title *</Label>
+                        <Input
+                          id="story-title"
+                          value={newStoryTitle}
+                          onChange={(e) => setNewStoryTitle(e.target.value)}
+                          placeholder="Enter story title"
+                          className="bg-background/50 border-white/20"
+                          required
+                        />
+                      </div>
 
-                  <div>
-                    <Label htmlFor="story-description" className="text-foreground">Description</Label>
-                    <Textarea
-                      id="story-description"
-                      value={newStoryDescription}
-                      onChange={(e) => setNewStoryDescription(e.target.value)}
-                      placeholder="Brief description of the story"
-                      rows={3}
-                      className="bg-background/50 border-white/20"
-                    />
+                      <div>
+                        <Label htmlFor="story-description" className="text-foreground">Description</Label>
+                        <Textarea
+                          id="story-description"
+                          value={newStoryDescription}
+                          onChange={(e) => setNewStoryDescription(e.target.value)}
+                          placeholder="Brief description of the story"
+                          rows={3}
+                          className="bg-background/50 border-white/20"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="story-cover" className="text-foreground">Cover Image</Label>
+                        <Input
+                          id="story-cover"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setNewStoryCover(e.target.files?.[0] || null)}
+                          className="bg-background/50 border-white/20"
+                        />
+                      </div>
+
+                      <Button type="submit" disabled={isCreating} className="w-full relative overflow-hidden">
+                        {isCreating ? (
+                          <>
+                            <div className="absolute inset-0 bg-gradient-to-r from-primary/50 to-primary-glow/50 animate-slide-in-right"></div>
+                            <div className="relative flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Creating Story...
+                            </div>
+                          </>
+                        ) : (
+                          "Create Story"
+                        )}
+                      </Button>
+                    </form>
                   </div>
-
-                  <div>
-                    <Label htmlFor="story-cover" className="text-foreground">Cover Image</Label>
-                    <Input
-                      id="story-cover"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setNewStoryCover(e.target.files?.[0] || null)}
-                      className="bg-background/50 border-white/20"
-                    />
-                  </div>
-
-                  <Button type="submit" className="w-full">
-                    Create Story
-                  </Button>
-                </form>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* PDF Upload */}
-          <TabsContent value="pdf-upload">
-            <PDFUploader onStoryCreated={() => {
-              loadStories();
-              setCurrentView('stories');
-            }} />
-          </TabsContent>
 
           {/* Chapters Management */}
           <TabsContent value="chapters">
