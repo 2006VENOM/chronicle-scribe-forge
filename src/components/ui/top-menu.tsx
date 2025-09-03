@@ -57,10 +57,6 @@ export const TopMenu = ({ onSettingsClick, onHomeClick }: TopMenuProps) => {
                 <Home className="mr-2 h-4 w-4" />
                 <span>Home</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onSettingsClick}>
-                <Search className="mr-2 h-4 w-4" />
-                <span>Search Stories</span>
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onSettingsClick}>
                 <Settings className="mr-2 h-4 w-4" />

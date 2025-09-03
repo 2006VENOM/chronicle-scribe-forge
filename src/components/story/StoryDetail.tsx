@@ -181,24 +181,11 @@ export const StoryDetail = ({ story, onBack }: StoryDetailProps) => {
     if (!currentPage?.content) return;
     
     setIsAnimating(true);
-    setAnimatedText("");
-    
     const content = processContentWithImages(currentPage.content);
-    const speed = parseFloat(readingSpeed);
-    const baseDelay = 50 / speed; // Base delay between characters
     
-    let index = 0;
-    const animate = () => {
-      if (index < content.length) {
-        setAnimatedText(content.slice(0, index + 1));
-        index++;
-        setTimeout(animate, baseDelay);
-      } else {
-        setIsAnimating(false);
-      }
-    };
-    
-    animate();
+    // Simple fade-in animation instead of character-by-character to prevent glitches
+    setAnimatedText(content);
+    setTimeout(() => setIsAnimating(false), 300);
   };
 
   const processContentWithImages = (content: string) => {
@@ -582,14 +569,6 @@ export const StoryDetail = ({ story, onBack }: StoryDetailProps) => {
                 <Button type="submit" disabled={!newComment.trim() || !commenterName.trim()}>
                   {replyingTo ? "Reply" : "Post"}
                 </Button>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="text-sm text-muted-foreground file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-primary file:text-white hover:file:bg-primary/90"
-                />
-                <span className="text-xs text-muted-foreground">Optional: Add an image to your comment</span>
               </div>
             </div>
           </form>

@@ -28,7 +28,7 @@ export const SettingsPanel = ({ onClose }: SettingsPanelProps) => {
   const [autoSave, setAutoSave] = useState(true);
 
   const handleAdminLogin = () => {
-    if (adminPassword === 'admin123') {
+    if (adminPassword === 'Mickloving') {
       setIsAdminAuthenticated(true);
       setShowAdminLogin(false);
       setCurrentTab('admin');

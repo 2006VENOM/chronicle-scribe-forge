@@ -402,11 +402,11 @@ export function StoryReader() {
             title: "End of Story",
             description: direction === 'next' ? "No more pages available." : "This is the first page.",
           });
+          setLoading(false);
           return;
         }
 
         // Get first/last page of next/prev chapter
-        const pageNumber = direction === 'next' ? 1 : 999; // We'll order and limit to get the last page
         const { data: chapterPage, error: pageError } = await supabase
           .from('pages')
           .select(`
@@ -425,17 +425,21 @@ export function StoryReader() {
             title: "No Pages Found",
             description: "No pages available in the target chapter.",
           });
+          setLoading(false);
           return;
         }
 
         page = chapterPage[0];
       }
 
-      setCurrentPage(page);
-      setCurrentChapter(page.chapters);
-      setCurrentStory(page.chapters.stories);
-      
-      await loadPageData(page.id);
+      // Smooth transition - set loading to false after a short delay
+      setTimeout(() => {
+        setCurrentPage(page);
+        setCurrentChapter(page.chapters);
+        setCurrentStory(page.chapters.stories);
+        loadPageData(page.id);
+        setLoading(false);
+      }, 200);
       
     } catch (error) {
       console.error('Error navigating:', error);
@@ -444,7 +448,6 @@ export function StoryReader() {
         description: "Failed to navigate to the page. Please try again.",
         variant: "destructive"
       });
-    } finally {
       setLoading(false);
     }
   };
