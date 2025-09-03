@@ -40,7 +40,7 @@ interface AdminPanelProps {
 
 export const AdminPanel = ({ onClose }: AdminPanelProps) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState(process.env.NEXT_PUBLIC_ADMIN_PASSWORD)
+  const [password, setPassword] = useState("");
   const [currentView, setCurrentView] = useState<'stories' | 'chapters' | 'pages' | 'add-story' | 'add-chapter' | 'add-page' | 'preview' | 'pdf-upload'>('stories');
   
   const [stories, setStories] = useState<Story[]>([]);
@@ -67,7 +67,7 @@ export const AdminPanel = ({ onClose }: AdminPanelProps) => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === "@Mickloving2006") {
+    if (password === "Mickloving") {
       setIsAuthenticated(true);
       toast.success("Admin access granted!");
     } else {
