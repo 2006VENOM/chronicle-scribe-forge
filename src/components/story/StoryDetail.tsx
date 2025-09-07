@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Eye, Heart, MessageCircle, ChevronRight, Book } from "lucide-react";
+import { ArrowLeft, Eye, ChevronRight, Book } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { StoryLikes } from "./StoryLikes";
+import { StoryComments } from "./StoryComments";
 
 interface Story {
   id: string;
@@ -14,6 +16,8 @@ interface Story {
   fake_likes: number;
   fake_comments: number;
   created_at: string;
+  is_pinned?: boolean;
+  auto_generated?: boolean;
 }
 
 interface Chapter {
@@ -166,19 +170,13 @@ export const StoryDetail = ({ story, onBack }: StoryDetailProps) => {
                     <p className="text-muted-foreground mb-4">{story.description}</p>
                     
                     {/* Stats */}
-                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-6 text-sm text-muted-foreground mb-4">
                       <div className="flex items-center gap-1">
                         <Eye className="h-4 w-4" />
                         {story.fake_reads.toLocaleString()} reads
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Heart className="h-4 w-4" />
-                        {story.fake_likes.toLocaleString()} likes
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MessageCircle className="h-4 w-4" />
-                        {story.fake_comments.toLocaleString()} comments
-                      </div>
+                      <StoryLikes storyId={story.id} initialLikes={story.fake_likes} />
+                      <StoryComments storyId={story.id} initialComments={story.fake_comments} />
                     </div>
                   </div>
                 </div>

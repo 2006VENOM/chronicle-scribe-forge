@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Eye, Heart, MessageCircle } from "lucide-react";
+import { Search, Eye, Heart, MessageCircle, Pin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { StoryGenerator } from "./StoryGenerator";
 
 interface Story {
   id: string;
@@ -14,6 +15,8 @@ interface Story {
   fake_likes: number;
   fake_comments: number;
   created_at: string;
+  is_pinned?: boolean;
+  auto_generated?: boolean;
 }
 
 interface StoryGridProps {
@@ -43,6 +46,7 @@ export const StoryGrid = ({ onStorySelect }: StoryGridProps) => {
       const { data, error } = await supabase
         .from('stories')
         .select('*')
+        .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -79,6 +83,9 @@ export const StoryGrid = ({ onStorySelect }: StoryGridProps) => {
           <h1 className="text-4xl font-bold text-white mb-4 text-shadow-lg">VENOM Stories</h1>
           <p className="text-white/80 text-lg">Discover captivating stories and adventures</p>
         </div>
+
+        {/* Story Generator */}
+        <StoryGenerator />
 
         {/* Search Bar */}
         <div className="glass-panel p-4 mb-8">
@@ -131,12 +138,20 @@ export const StoryGrid = ({ onStorySelect }: StoryGridProps) => {
                       </div>
                     )}
                     
-                    {/* Rating Badge */}
-                    <Badge 
-                      className="absolute top-2 right-2 bg-accent text-accent-foreground font-semibold"
-                    >
-                      ⭐ {getTotalRating(story).toLocaleString()}
-                    </Badge>
+                    {/* Badges */}
+                    <div className="absolute top-2 right-2 flex flex-col gap-1">
+                      {story.is_pinned && (
+                        <Badge className="bg-yellow-500 text-yellow-900 font-semibold text-xs">
+                          <Pin className="h-3 w-3 mr-1" />
+                          Pinned
+                        </Badge>
+                      )}
+                      <Badge 
+                        className="bg-accent text-accent-foreground font-semibold"
+                      >
+                        ⭐ {getTotalRating(story).toLocaleString()}
+                      </Badge>
+                    </div>
                   </div>
 
                   {/* Story Info */}

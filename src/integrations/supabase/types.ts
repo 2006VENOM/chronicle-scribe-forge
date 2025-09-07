@@ -468,6 +468,7 @@ export type Database = {
       }
       stories: {
         Row: {
+          auto_generated: boolean | null
           cover_image_url: string | null
           created_at: string
           description: string | null
@@ -475,10 +476,12 @@ export type Database = {
           fake_likes: number | null
           fake_reads: number | null
           id: string
+          is_pinned: boolean | null
           title: string
           updated_at: string
         }
         Insert: {
+          auto_generated?: boolean | null
           cover_image_url?: string | null
           created_at?: string
           description?: string | null
@@ -486,10 +489,12 @@ export type Database = {
           fake_likes?: number | null
           fake_reads?: number | null
           id?: string
+          is_pinned?: boolean | null
           title: string
           updated_at?: string
         }
         Update: {
+          auto_generated?: boolean | null
           cover_image_url?: string | null
           created_at?: string
           description?: string | null
@@ -497,8 +502,65 @@ export type Database = {
           fake_likes?: number | null
           fake_reads?: number | null
           id?: string
+          is_pinned?: boolean | null
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      story_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          parent_comment_id: string | null
+          story_id: string
+          user_name: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          parent_comment_id?: string | null
+          story_id: string
+          user_name: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          parent_comment_id?: string | null
+          story_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "story_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      story_likes: {
+        Row: {
+          created_at: string
+          id: string
+          story_id: string
+          user_session: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          story_id: string
+          user_session: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          story_id?: string
+          user_session?: string
         }
         Relationships: []
       }
