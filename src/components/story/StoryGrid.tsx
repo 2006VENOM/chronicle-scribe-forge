@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search, Eye, Heart, MessageCircle, Pin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { StoryGenerator } from "./StoryGenerator";
 
 interface Story {
   id: string;
@@ -83,9 +82,6 @@ export const StoryGrid = ({ onStorySelect }: StoryGridProps) => {
           <h1 className="text-4xl font-bold text-white mb-4 text-shadow-lg">VENOM Stories</h1>
           <p className="text-white/80 text-lg">Discover captivating stories and adventures</p>
         </div>
-
-        {/* Story Generator */}
-        <StoryGenerator />
 
         {/* Search Bar */}
         <div className="glass-panel p-4 mb-8">
